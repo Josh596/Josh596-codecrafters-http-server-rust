@@ -3,7 +3,7 @@ use regex::Regex;
 use std::net::TcpListener;
 use std::{
     collections::HashMap,
-    io::{Read, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::TcpStream,
 };
 enum HTTPMethod {
@@ -38,28 +38,32 @@ impl HTTPRequest {
         // let request_parts: Vec<&str> = content.split(" ").collect();
         // if request_parts.len()
         // Split using REGEX
+        println!("{content} a");
         let re = Regex::new(
             r"(?<method>\w+) (?<path>/?.+) (?<version>.+)\r\n(?<headers>(?:.+\r\n)*)\r\n(?<request_body>.*)",
         )
         .unwrap();
+        let re = Regex::new(r"(?<method>\w+) (?<path>/?.+) (?<version>.+)").unwrap();
         let caps = re.captures(content).expect("Error Occurred");
 
         let method = &caps["method"];
         let path = &caps["path"];
         let version = &caps["version"];
-        let headers_str = &caps["headers"];
-        let request_body = &caps["request_body"];
+        // let headers_str = &caps["headers"];
+        // let request_body = &caps["request_body"];
 
         // Parse headers here
         let mut headers = HashMap::new();
-        let headers_re = Regex::new(r"(?:(?<header_name>.+):(?<header_value>[^\r\n]+))+").unwrap();
+        // let headers_re = Regex::new(r"(?:(?<header_name>.+):(?<header_value>[^\r\n]+))+").unwrap();
 
-        for (_, [header_name, header_value]) in
-            headers_re.captures_iter(headers_str).map(|c| c.extract())
-        {
-            println!("{}:{}", header_name, header_value);
-            headers.insert(header_name.to_string(), header_value.to_string());
-        }
+        // for (_, [header_name, header_value]) in
+        //     headers_re.captures_iter(headers_str).map(|c| c.extract())
+        // {
+        //     println!("{}:{}", header_name, header_value);
+        //     headers.insert(header_name.to_string(), header_value.to_string());
+        // }
+
+        let request_body = "";
 
         HTTPRequest {
             method: HTTPMethod::from_value(method).unwrap(),
@@ -72,24 +76,32 @@ impl HTTPRequest {
 }
 
 fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = String::new();
+    // let mut buffer = String::new();
 
-    stream.read_to_string(&mut buffer).unwrap();
-    let request = HTTPRequest::from_content(&buffer);
+    // let reader = BufReader::new(&stream);
+    let mut buf: [u8; 1024] = [0; 1024];
+    stream.read(&mut buf).unwrap();
+    let s = String::from_utf8_lossy(&buf);
+    // let content = reader.lines();
+    // stream.read_to_string(&mut buffer).unwrap();
+    let request = HTTPRequest::from_content(s.lines().next().unwrap());
 
     let path = &request.path;
-    // dbg!(path);
+    dbg!(path);
     match path.as_str() {
         "/" => {
-            stream.write("HTTP/1.1 200 OK\r\n\r\n".as_bytes()).unwrap();
+            stream
+                .write_all("HTTP/1.1 200 OK\r\n\r\n".as_bytes())
+                .unwrap();
         }
         _ => {
             println!("Path not set");
             stream
-                .write("HTTP/1.1 404 Not Found\r\n\r\n".as_bytes())
+                .write_all("HTTP/1.1 404 Not Found\r\n\r\n".as_bytes())
                 .unwrap();
+            println!("Sent 404 ")
         }
-    }
+    };
 }
 
 fn main() {
@@ -102,10 +114,11 @@ fn main() {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(mut _stream) => {
+            Ok(_stream) => {
+                println!("accepted new connection");
                 handle_connection(_stream);
                 // _stream.write("HTTP/1.1 200 OK\r\n\r\n".as_bytes()).unwrap();
-                println!("accepted new connection");
+                println!("handled new connection");
             }
             Err(e) => {
                 println!("error: {}", e);
