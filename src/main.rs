@@ -28,19 +28,6 @@ fn handle_connection(mut stream: TcpStream) {
     let request = HTTPRequest::from_content(&s);
 
     let path = &request.path;
-    let re = Regex::new(r"/(?<text>[^/]*)/?(?<message>.+)?").unwrap();
-    let caps = re
-        .captures(&path)
-        .expect("Error Occurred while getting message");
-    // dbg!(&caps["text"], &caps["message"], &path);
-    let message = caps.name("message").map_or("", |m| m.as_str());
-    let mut response = HTTPResponse {
-        status_code: 200,
-        status_text: String::from("OK"),
-        headers: HashMap::new(),
-        body: message.to_string(),
-        version: String::from("HTTP/1.1"),
-    };
 
     // match message {
     //     "" => {
@@ -54,21 +41,41 @@ fn handle_connection(mut stream: TcpStream) {
     // }
 
     if path.starts_with("/echo") {
+        let path = &request.path;
+        let re = Regex::new(r"/(?<text>[^/]*)/?(?<message>.+)?").unwrap();
+        let caps = re
+            .captures(&path)
+            .expect("Error Occurred while getting message");
+        // dbg!(&caps["text"], &caps["message"], &path);
+        let message = caps.name("message").map_or("", |m| m.as_str());
+        let mut response = HTTPResponse {
+            status_code: 200,
+            status_text: String::from("OK"),
+            headers: HashMap::new(),
+            body: message.to_string(),
+            version: String::from("HTTP/1.1"),
+        };
         stream.write_all(response.construct().as_bytes());
-    }
+    } else if path == "/user-agent" {
+        let message = request.headers.get("User-Agent").unwrap();
+        let mut response = HTTPResponse {
+            status_code: 200,
+            status_text: String::from("OK"),
+            headers: HashMap::new(),
+            body: message.to_string(),
 
-    match path.as_str() {
-        "/" => {
-            stream
-                .write_all("HTTP/1.1 200 OK\r\n\r\n".as_bytes())
-                .unwrap();
-        }
-        _ => {
-            stream
-                .write_all("HTTP/1.1 404 Not Found\r\n\r\n".as_bytes())
-                .unwrap();
-        }
-    };
+            version: String::from("HTTP/1.1"),
+        };
+        stream.write_all(response.construct().as_bytes());
+    } else if path == "/" {
+        stream
+            .write_all("HTTP/1.1 200 OK\r\n\r\n".as_bytes())
+            .unwrap();
+    } else {
+        stream
+            .write_all("HTTP/1.1 404 Not Found\r\n\r\n".as_bytes())
+            .unwrap();
+    }
 }
 
 fn main() {

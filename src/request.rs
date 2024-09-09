@@ -61,7 +61,10 @@ impl HTTPRequest {
             headers_re.captures_iter(headers_str).map(|c| c.extract())
         {
             println!("{}:{}", header_name, header_value);
-            headers.insert(header_name.to_string(), header_value.to_string());
+            headers.insert(
+                header_name.trim().to_string(),
+                header_value.trim().to_string(),
+            );
         }
 
         // let request_body = "";
