@@ -38,11 +38,10 @@ impl HTTPRequest {
         // let request_parts: Vec<&str> = content.split(" ").collect();
         // if request_parts.len()
         // Split using REGEX
-        println!("{content} {}", content.len());
-        let re = Regex::new(
-            r"(?<method>\w+) (?<path>/?.+) (?<version>.+)\r\n(?<headers>(?:.+\r\n)*)\r\n(?<request_body>.*)",
-        )
-        .unwrap();
+        println!("{content}{}", content.len());
+        let re =
+            Regex::new(r"(?<method>\w+) (?<path>/?.+) (?<version>.+)\r\n(?<headers>(.+\r\n)*)\r\n(?<request_body>.*)")
+                .unwrap();
         // let re = Regex::new(r"(?<method>\w+) (?<path>/?.+) (?<version>.+)").unwrap();
         let caps = re.captures(content).expect("Error Occurred");
 
@@ -51,7 +50,7 @@ impl HTTPRequest {
         let version = &caps["version"];
         let headers_str = &caps["headers"];
         let request_body = &caps["request_body"];
-
+        dbg!(request_body);
         // Parse headers here
         let mut headers = HashMap::new();
         let headers_re =
