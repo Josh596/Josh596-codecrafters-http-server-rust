@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::{io::Write, net::TcpStream};
 
 pub struct HTTPResponse {
     pub status_code: u8,
@@ -45,5 +46,9 @@ impl HTTPResponse {
             body = self.body
         )
         // let res = format!("{self.ver}");
+    }
+
+    pub fn send(&mut self, stream: &mut TcpStream) {
+        stream.write_all(self.construct().as_bytes()).unwrap()
     }
 }
