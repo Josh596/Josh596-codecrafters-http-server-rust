@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::{io::Write, net::TcpStream};
 
 pub struct HTTPResponse {
-    pub status_code: u8,
+    pub status_code: u32,
     pub status_text: String,
     pub headers: HashMap<String, String>, // Should be a HashMap
     pub body: String,
@@ -20,13 +20,14 @@ impl HTTPResponse {
             status_code = self.status_code,
             status_text = self.status_text
         );
+        self.headers
+            .entry(String::from("Content-Type"))
+            .or_insert(String::from("text/plain"));
 
         self.headers
-            .insert(String::from("Content-Type"), String::from("text/plain"));
-        self.headers.insert(
-            String::from("Content-Length"),
-            format!("{}", self.body.len()),
-        );
+            .entry(String::from("Content-Length"))
+            .or_insert(format!("{}", self.body.len()));
+
         let mut header_str = String::new();
 
         for key in self.headers.keys() {
@@ -50,5 +51,15 @@ impl HTTPResponse {
 
     pub fn send(&mut self, stream: &mut TcpStream) {
         stream.write_all(self.construct().as_bytes()).unwrap()
+    }
+
+    pub fn error_404() -> Self {
+        HTTPResponse {
+            status_code: 404,
+            status_text: String::from("Not Found"),
+            headers: HashMap::new(),
+            body: "".to_string(),
+            version: String::from("HTTP/1.1"),
+        }
     }
 }

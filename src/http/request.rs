@@ -50,7 +50,6 @@ impl HTTPRequest {
         let version = &caps["version"];
         let headers_str = &caps["headers"];
         let request_body = &caps["request_body"];
-        dbg!(request_body);
         // Parse headers here
         let mut headers = HashMap::new();
         let headers_re =
