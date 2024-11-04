@@ -22,11 +22,7 @@ impl HTTPResponse {
         );
 
         // Determine compression type from Accept-Encoding
-        let compression_type = request_headers
-            .get("Accept-Encoding")
-            .map_or(CompressionType::None, |accept_encoding| {
-                CompressionType::from_str(accept_encoding)
-            });
+        let compression_type = CompressionType::from_headers(request_headers);
 
         // Compress body if needed
         let body_bytes = compression_type

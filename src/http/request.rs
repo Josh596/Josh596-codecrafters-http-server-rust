@@ -71,12 +71,7 @@ impl HTTPRequest {
                     .read_exact(&mut body)
                     .map_err(|e| format!("Failed to read body: {}", e))?;
 
-                let compression_type = request
-                    .headers
-                    .get("Accept-Encoding")
-                    .map_or(CompressionType::None, |accept_encoding| {
-                        CompressionType::from_str(accept_encoding)
-                    });
+                let compression_type = CompressionType::from_headers(&request.headers);
                 let decoded_content = compression_type.decode(&body)?;
                 request.body = String::from_utf8(decoded_content)
                     .map_err(|_| "Invalid UTF-8 in request body")?;

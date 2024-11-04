@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{collections::HashMap, io::Write};
 
 use flate2::{
     write::{GzDecoder, GzEncoder},
@@ -21,18 +21,36 @@ impl CompressionType {
         }
     }
 
+    pub fn from_headers(headers: &HashMap<String, String>) -> Self {
+        let accepeted_encodings = headers.get("Accept-Encoding");
+
+        if let Some(encodings) = accepeted_encodings {
+            let encodings: Vec<String> = encodings
+                .split(",")
+                .map(|encoding| encoding.trim().to_string())
+                .collect();
+            if encodings.contains(&String::from("gzip")) {
+                return Self::Gzip;
+            }
+
+            Self::None
+        } else {
+            CompressionType::None
+        }
+    }
+
     pub fn as_str(&self) -> &str {
         match self {
-            CompressionType::Gzip => "gzip",
+            Self::Gzip => "gzip",
             // CompressionType::Deflate => "deflate",
-            CompressionType::None => "identity",
+            Self::None => "identity",
         }
     }
 
     pub fn encode(&self, content: &[u8]) -> Result<Vec<u8>, String> {
         match self {
-            CompressionType::None => Ok(content.to_vec()),
-            CompressionType::Gzip => {
+            Self::None => Ok(content.to_vec()),
+            Self::Gzip => {
                 let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
                 encoder
                     .write_all(&content)
@@ -47,8 +65,8 @@ impl CompressionType {
 
     pub fn decode(&self, content: &[u8]) -> Result<Vec<u8>, String> {
         match self {
-            CompressionType::None => Ok(content.to_vec()),
-            CompressionType::Gzip => {
+            Self::None => Ok(content.to_vec()),
+            Self::Gzip => {
                 let writer = Vec::new();
                 let mut decoder = GzDecoder::new(writer);
 
