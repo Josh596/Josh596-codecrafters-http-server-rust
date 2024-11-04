@@ -51,7 +51,7 @@ impl PathHandler {
                 );
                 let mut response = (registered_path.callback)(&self.context, request);
                 stream
-                    .write_all(response.construct(&request.headers).as_bytes())
+                    .write_all(&response.construct(&request.headers))
                     .unwrap();
 
                 return Ok(());
@@ -60,7 +60,7 @@ impl PathHandler {
 
         let mut response = HTTPResponse::error_404();
         stream
-            .write_all(response.construct(&request.headers).as_bytes())
+            .write_all(&response.construct(&request.headers))
             .unwrap();
 
         Err(format!("404: Path {} is not registered", &request.path))

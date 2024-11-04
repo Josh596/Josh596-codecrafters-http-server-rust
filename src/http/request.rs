@@ -85,7 +85,6 @@ impl HTTPRequest {
         // let request_parts: Vec<&str> = content.split(" ").collect();
         // if request_parts.len()
         // Split using REGEX
-        println!("{content}{}", content.len());
         let re =
             Regex::new(r"(?<method>\w+) (?<path>/?.+) (?<version>.+)\r\n(?<headers>(.+\r\n)*)")
                 .unwrap();

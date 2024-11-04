@@ -11,31 +11,38 @@ pub struct HTTPResponse {
 }
 
 impl HTTPResponse {
-    pub fn construct(&mut self, request_headers: &HashMap<String, String>) -> String {
+    pub fn construct(&mut self, request_headers: &HashMap<String, String>) -> Vec<u8> {
         // let version = self.version;
 
+        // let status_line = format!(
+        //     "{version} {status_code} {status_text}",
+        //     version = self.version,
+        //     status_code = self.status_code,
+        //     status_text = self.status_text
+        // );
+
         let status_line = format!(
-            "{version} {status_code} {status_text}",
-            version = self.version,
-            status_code = self.status_code,
-            status_text = self.status_text
+            "{} {} {}\r\n",
+            self.version, self.status_code, self.status_text
         );
 
         // Determine compression type from Accept-Encoding
         let compression_type = CompressionType::from_headers(request_headers);
-
+        println!("{} {}", self.body, self.body.len());
         // Compress body if needed
         let body_bytes = compression_type
             .encode(self.body.as_bytes())
             .unwrap_or_else(|_| self.body.as_bytes().to_vec());
 
+        // let body = String::from_utf8(body_bytes).expect("Error occurred");
+        // println!("{:?}", body);
         self.headers
             .entry(String::from("Content-Type"))
             .or_insert(String::from("text/plain"));
 
         self.headers
             .entry(String::from("Content-Length"))
-            .or_insert(format!("{}", self.body.len()));
+            .or_insert(format!("{}", body_bytes.len()));
 
         if compression_type != CompressionType::None {
             self.headers.insert(
@@ -44,10 +51,10 @@ impl HTTPResponse {
             );
         }
 
-        let mut header_str = String::new();
+        let mut headers = String::new();
 
         for key in self.headers.keys() {
-            header_str.push_str(
+            headers.push_str(
                 format!(
                     "{key}: {value}\r\n",
                     key = key,
@@ -56,14 +63,17 @@ impl HTTPResponse {
                 .as_str(),
             )
         }
+        headers.push_str("\r\n"); // Empty line after headers
 
-        format!(
-            "{}\r\n{}\r\n{}",
-            status_line,
-            header_str,
-            String::from_utf8_lossy(&body_bytes)
-        )
+        // format!("{}\r\n{}\r\n{}", status_line, header_str, body);
 
+        // Combine everything into bytes
+        let mut response = Vec::new();
+        response.extend_from_slice(status_line.as_bytes());
+        response.extend_from_slice(headers.as_bytes());
+        response.extend_from_slice(&body_bytes); // Add compressed body bytes directly
+
+        response
         // let res = format!("{self.ver}");
     }
 
