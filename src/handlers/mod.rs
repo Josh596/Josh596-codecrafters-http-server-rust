@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs, net::TcpStream};
 
-use crate::http::{request::HTTPRequest, response::HTTPResponse};
+use crate::http::{request::HTTPMethod, request::HTTPRequest, response::HTTPResponse};
 use regex::Regex;
 
 use crate::context::HandlerContext;
@@ -53,6 +53,16 @@ pub fn index(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest
 }
 
 pub fn files(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
+    match request.method {
+        HTTPMethod::GET => files_get(ctx, stream, request),
+        HTTPMethod::POST => files_post(ctx, stream, request),
+        _ => HTTPResponse::error_405(),
+    }
+
+    //
+}
+
+fn files_get(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
     let path = &request.path;
 
     let file_path: Vec<&str> = path.split("/").collect();
@@ -77,8 +87,33 @@ pub fn files(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest
                 version: String::from("HTTP/1.1"),
             };
         }
-        Err(error) => return HTTPResponse::error_404(),
+        Err(_) => return HTTPResponse::error_404(),
+    }
+}
+
+fn files_post(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
+    if !request.is_complete {
+        return HTTPResponse::error_500();
     }
 
-    //
+    let request_body = &request.body;
+    let path = &request.path;
+
+    let file_path: Vec<&str> = path.split("/").collect();
+    let filename = file_path.get(2).expect("Invalid Path");
+
+    let full_path = ctx.base_dir().join(filename);
+
+    match fs::write(full_path, request_body) {
+        Ok(_) => {}
+        Err(_) => return HTTPResponse::error_500(),
+    }
+
+    return HTTPResponse {
+        status_code: 201,
+        status_text: String::from("Created"),
+        headers: HashMap::new(),
+        body: String::from(""),
+        version: String::from("HTTP/1.1"),
+    };
 }

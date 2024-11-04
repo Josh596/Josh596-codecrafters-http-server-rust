@@ -15,18 +15,18 @@ pub mod path_handler;
 pub mod pool;
 pub fn handle_connection(mut stream: TcpStream, base_dir: String) {
     let buf_reader = BufReader::new(&mut stream);
-    let request_and_header: Vec<String> = buf_reader
-        .lines()
-        .map(|result| result.unwrap())
-        .take_while(|line| !line.is_empty())
-        .collect();
-    println!("Line count: {}", request_and_header.len());
+    // let request_and_header: Vec<String> = buf_reader
+    //     .lines()
+    //     .map(|result| result.unwrap())
+    //     .take_while(|line| !line.is_empty())
+    //     .collect();
+    // println!("Line count: {}", request_and_header.len());
     // Add CRLF, .lines() method removes the CRLF
-    let request_and_header_lines = request_and_header.join("\r\n") + "\r\n\r\n";
 
-    let request = HTTPRequest::from_content(&request_and_header_lines);
-
+    // let request = HTTPRequest::from_head(&request_and_header_lines);
+    let request = HTTPRequest::from_stream(&mut stream).expect("Unable to parse HTTp Request");
     let handler = path_handler::setup_path_handler(PathBuf::from(base_dir));
+
     handler.handle_request(&request, &mut stream);
 }
 

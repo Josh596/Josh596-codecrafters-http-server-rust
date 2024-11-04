@@ -62,4 +62,24 @@ impl HTTPResponse {
             version: String::from("HTTP/1.1"),
         }
     }
+
+    pub fn error_405() -> Self {
+        HTTPResponse {
+            status_code: 405,
+            status_text: String::from("Method Not Allowed"),
+            headers: HashMap::new(),
+            body: "".to_string(),
+            version: String::from("HTTP/1.1"),
+        }
+    }
+
+    pub fn error_500() -> Self {
+        HTTPResponse {
+            status_code: 500,
+            status_text: String::from("Internal Server Error"),
+            headers: HashMap::new(),
+            body: "".to_string(),
+            version: String::from("HTTP/1.1"),
+        }
+    }
 }
