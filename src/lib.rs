@@ -1,11 +1,7 @@
 use pool::ThreadPool;
 #[allow(unused_imports)]
 use std::net::TcpListener;
-use std::{
-    io::{BufRead, BufReader},
-    net::TcpStream,
-    path::PathBuf,
-};
+use std::{net::TcpStream, path::PathBuf};
 
 pub mod http;
 use crate::http::request::HTTPRequest;
@@ -14,7 +10,6 @@ pub mod handlers;
 pub mod path_handler;
 pub mod pool;
 pub fn handle_connection(mut stream: TcpStream, base_dir: String) {
-    let buf_reader = BufReader::new(&mut stream);
     // let request_and_header: Vec<String> = buf_reader
     //     .lines()
     //     .map(|result| result.unwrap())
@@ -27,7 +22,9 @@ pub fn handle_connection(mut stream: TcpStream, base_dir: String) {
     let request = HTTPRequest::from_stream(&mut stream).expect("Unable to parse HTTp Request");
     let handler = path_handler::setup_path_handler(PathBuf::from(base_dir));
 
-    handler.handle_request(&request, &mut stream);
+    handler
+        .handle_request(&request, &mut stream)
+        .expect("Error occured while handling request");
 }
 
 pub fn start_server(host: &str, base_dir: String) {

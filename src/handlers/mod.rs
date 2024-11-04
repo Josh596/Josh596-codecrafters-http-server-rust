@@ -1,12 +1,11 @@
-use std::{collections::HashMap, fs, net::TcpStream};
+use std::{collections::HashMap, fs};
 
 use crate::http::{request::HTTPMethod, request::HTTPRequest, response::HTTPResponse};
 use regex::Regex;
 
 use crate::context::HandlerContext;
-pub mod error_404;
 
-pub fn echo(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
+pub fn echo(_ctx: &HandlerContext, request: &HTTPRequest) -> HTTPResponse {
     let re = Regex::new(r"/(?<text>[^/]*)/?(?<message>.+)?").unwrap();
     let path = &request.path;
 
@@ -24,12 +23,7 @@ pub fn echo(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest)
     }
 }
 
-pub fn user_agent(
-    ctx: &HandlerContext,
-    stream: &mut TcpStream,
-    request: &HTTPRequest,
-) -> HTTPResponse {
-    let path = &request.path;
+pub fn user_agent(_ctx: &HandlerContext, request: &HTTPRequest) -> HTTPResponse {
     let message = request.headers.get("User-Agent").unwrap();
 
     HTTPResponse {
@@ -42,7 +36,7 @@ pub fn user_agent(
     }
 }
 
-pub fn index(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
+pub fn index(_ctx: &HandlerContext, _request: &HTTPRequest) -> HTTPResponse {
     HTTPResponse {
         status_code: 200,
         status_text: String::from("OK"),
@@ -52,17 +46,17 @@ pub fn index(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest
     }
 }
 
-pub fn files(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
+pub fn files(ctx: &HandlerContext, request: &HTTPRequest) -> HTTPResponse {
     match request.method {
-        HTTPMethod::GET => files_get(ctx, stream, request),
-        HTTPMethod::POST => files_post(ctx, stream, request),
+        HTTPMethod::GET => files_get(ctx, request),
+        HTTPMethod::POST => files_post(ctx, request),
         _ => HTTPResponse::error_405(),
     }
 
     //
 }
 
-fn files_get(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
+fn files_get(ctx: &HandlerContext, request: &HTTPRequest) -> HTTPResponse {
     let path = &request.path;
 
     let file_path: Vec<&str> = path.split("/").collect();
@@ -91,7 +85,7 @@ fn files_get(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest
     }
 }
 
-fn files_post(ctx: &HandlerContext, stream: &mut TcpStream, request: &HTTPRequest) -> HTTPResponse {
+fn files_post(ctx: &HandlerContext, request: &HTTPRequest) -> HTTPResponse {
     if !request.is_complete {
         return HTTPResponse::error_500();
     }

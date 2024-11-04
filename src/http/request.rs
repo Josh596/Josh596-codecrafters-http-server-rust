@@ -3,9 +3,11 @@ use regex::Regex;
 use std::net::TcpListener;
 use std::{
     collections::HashMap,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Read},
     net::TcpStream,
 };
+
+use super::compression::CompressionType;
 
 pub enum HTTPMethod {
     GET,
@@ -69,8 +71,15 @@ impl HTTPRequest {
                     .read_exact(&mut body)
                     .map_err(|e| format!("Failed to read body: {}", e))?;
 
-                request.body =
-                    String::from_utf8(body).map_err(|_| "Invalid UTF-8 in request body")?;
+                let compression_type = request
+                    .headers
+                    .get("Accept-Encoding")
+                    .map_or(CompressionType::None, |accept_encoding| {
+                        CompressionType::from_str(accept_encoding)
+                    });
+                let decoded_content = compression_type.decode(&body)?;
+                request.body = String::from_utf8(decoded_content)
+                    .map_err(|_| "Invalid UTF-8 in request body")?;
             }
         }
         request.is_complete = true;

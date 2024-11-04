@@ -1,12 +1,12 @@
 use regex::Regex;
-use std::{collections::HashMap, io::Write, net::TcpStream, path::PathBuf};
+use std::{io::Write, net::TcpStream, path::PathBuf};
 
 use crate::{
     context::HandlerContext,
     http::{request::HTTPRequest, response::HTTPResponse},
 };
 
-type CallbackHandler = Box<dyn Fn(&HandlerContext, &mut TcpStream, &HTTPRequest) -> HTTPResponse>;
+type CallbackHandler = Box<dyn Fn(&HandlerContext, &HTTPRequest) -> HTTPResponse>;
 
 struct Path {
     pattern: Regex,
@@ -26,7 +26,7 @@ impl PathHandler {
     }
     pub fn register_path<F>(&mut self, path_regex: &str, callback: F) -> Result<(), regex::Error>
     where
-        F: Fn(&HandlerContext, &mut TcpStream, &HTTPRequest) -> HTTPResponse + 'static,
+        F: Fn(&HandlerContext, &HTTPRequest) -> HTTPResponse + 'static,
     {
         let path = Regex::new(&path_regex).unwrap();
         self.paths.push(Path {
@@ -49,15 +49,19 @@ impl PathHandler {
                     "A match has been found; handler => {}, path => {path}",
                     registered_path.pattern
                 );
-                let mut response = (registered_path.callback)(&self.context, stream, request);
-                stream.write_all(response.construct().as_bytes()).unwrap();
+                let mut response = (registered_path.callback)(&self.context, request);
+                stream
+                    .write_all(response.construct(&request.headers).as_bytes())
+                    .unwrap();
 
                 return Ok(());
             }
         }
 
-        let mut response = crate::handlers::error_404::error_404(&self.context, stream, request);
-        stream.write_all(response.construct().as_bytes()).unwrap();
+        let mut response = HTTPResponse::error_404();
+        stream
+            .write_all(response.construct(&request.headers).as_bytes())
+            .unwrap();
 
         Err(format!("404: Path {} is not registered", &request.path))
     }

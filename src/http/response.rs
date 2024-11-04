@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::{io::Write, net::TcpStream};
+
+use crate::http::compression::CompressionType;
 
 pub struct HTTPResponse {
     pub status_code: u32,
@@ -10,8 +11,7 @@ pub struct HTTPResponse {
 }
 
 impl HTTPResponse {
-    // HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\nabc
-    pub fn construct(&mut self) -> String {
+    pub fn construct(&mut self, request_headers: &HashMap<String, String>) -> String {
         // let version = self.version;
 
         let status_line = format!(
@@ -20,6 +20,19 @@ impl HTTPResponse {
             status_code = self.status_code,
             status_text = self.status_text
         );
+
+        // Determine compression type from Accept-Encoding
+        let compression_type = request_headers
+            .get("Accept-Encoding")
+            .map_or(CompressionType::None, |accept_encoding| {
+                CompressionType::from_str(accept_encoding)
+            });
+
+        // Compress body if needed
+        let body_bytes = compression_type
+            .encode(self.body.as_bytes())
+            .unwrap_or_else(|_| self.body.as_bytes().to_vec());
+
         self.headers
             .entry(String::from("Content-Type"))
             .or_insert(String::from("text/plain"));
@@ -27,6 +40,13 @@ impl HTTPResponse {
         self.headers
             .entry(String::from("Content-Length"))
             .or_insert(format!("{}", self.body.len()));
+
+        if compression_type != CompressionType::None {
+            self.headers.insert(
+                String::from("Content-Encoding"),
+                String::from(compression_type.as_str()),
+            );
+        }
 
         let mut header_str = String::new();
 
@@ -42,15 +62,13 @@ impl HTTPResponse {
         }
 
         format!(
-            "{status_line}\r\n{header}\r\n{body}",
-            header = header_str,
-            body = self.body
+            "{}\r\n{}\r\n{}",
+            status_line,
+            header_str,
+            String::from_utf8_lossy(&body_bytes)
         )
-        // let res = format!("{self.ver}");
-    }
 
-    pub fn send(&mut self, stream: &mut TcpStream) {
-        stream.write_all(self.construct().as_bytes()).unwrap()
+        // let res = format!("{self.ver}");
     }
 
     pub fn error_404() -> Self {
